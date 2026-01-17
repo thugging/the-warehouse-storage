@@ -8,9 +8,9 @@
 
 ---
 
-## 🎮 Script Warehouse Holder
+## 🔆 What is this?
 
-Generic storage  
-Organized by, Zyren and Carlos  
+Our script warehouse full of fun scripts, archived scripts, weird scripts messing with physics, scripts movement related, and etc.
+Organized by, Zyren and Carlos 
 
 ---
