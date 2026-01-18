@@ -1,0 +1,759 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local outlinesEnabled = false
+local highlights = {}
+local lockedPlayer = nil
+local lockConnection = nil
+local scriptEnabled = false
+
+-- Keybind settings
+local espKeybind = Enum.KeyCode.T
+local lockKeybind = Enum.KeyCode.E
+local toggleGuiKeybind = Enum.KeyCode.LeftAlt
+local waitingForKeybind = nil
+
+-- Create GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "LoadingScreen"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Main Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 400, 0, 280)
+mainFrame.Position = UDim2.new(0.5, -200, 0.5, -140)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 10, 20)
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = screenGui
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 20)
+mainCorner.Parent = mainFrame
+
+-- Dark overlay for depth
+local overlay = Instance.new("Frame")
+overlay.Size = UDim2.new(1, 0, 1, 0)
+overlay.BackgroundColor3 = Color3.fromRGB(10, 5, 15)
+overlay.BackgroundTransparency = 0.3
+overlay.BorderSizePixel = 0
+overlay.Parent = mainFrame
+
+-- Gradient background
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 15, 45)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 10, 30)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 5, 25))
+}
+gradient.Rotation = 135
+gradient.Parent = overlay
+
+-- Accent border glow (purple)
+local glow = Instance.new("UIStroke")
+glow.Color = Color3.fromRGB(150, 100, 255)
+glow.Thickness = 2
+glow.Transparency = 0.3
+glow.Parent = mainFrame
+
+-- Animated glow effect
+task.spawn(function()
+	while mainFrame.Parent do
+		for i = 0.3, 0.6, 0.05 do
+			if not mainFrame.Parent then break end
+			glow.Transparency = i
+			task.wait(0.05)
+		end
+		for i = 0.6, 0.3, -0.05 do
+			if not mainFrame.Parent then break end
+			glow.Transparency = i
+			task.wait(0.05)
+		end
+	end
+end)
+
+-- Top accent line
+local accentLine = Instance.new("Frame")
+accentLine.Size = UDim2.new(1, 0, 0, 4)
+accentLine.Position = UDim2.new(0, 0, 0, 0)
+accentLine.BackgroundColor3 = Color3.fromRGB(150, 100, 255)
+accentLine.BorderSizePixel = 0
+accentLine.ZIndex = 2
+accentLine.Parent = mainFrame
+
+local lineGradient = Instance.new("UIGradient")
+lineGradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(100, 50, 200)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 100, 255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 50, 200))
+}
+lineGradient.Parent = accentLine
+
+-- Made by text
+local madeByText = Instance.new("TextLabel")
+madeByText.Size = UDim2.new(1, -40, 0, 50)
+madeByText.Position = UDim2.new(0, 20, 0, 30)
+madeByText.BackgroundTransparency = 1
+madeByText.Text = "Criminality Script"
+madeByText.TextColor3 = Color3.fromRGB(200, 180, 255)
+madeByText.TextSize = 32
+madeByText.Font = Enum.Font.GothamBold
+madeByText.TextXAlignment = Enum.TextXAlignment.Center
+madeByText.TextStrokeTransparency = 0.5
+madeByText.TextStrokeColor3 = Color3.fromRGB(100, 50, 200)
+madeByText.ZIndex = 2
+madeByText.Parent = mainFrame
+
+-- Creator text
+local creatorText = Instance.new("TextLabel")
+creatorText.Size = UDim2.new(1, -40, 0, 40)
+creatorText.Position = UDim2.new(0, 20, 0, 85)
+creatorText.BackgroundTransparency = 1
+creatorText.Text = "Made by 144h"
+creatorText.TextColor3 = Color3.fromRGB(180, 160, 220)
+creatorText.TextSize = 20
+creatorText.Font = Enum.Font.GothamMedium
+creatorText.TextXAlignment = Enum.TextXAlignment.Center
+creatorText.ZIndex = 2
+creatorText.Parent = mainFrame
+
+-- Subtitle text
+local subtitle = Instance.new("TextLabel")
+subtitle.Size = UDim2.new(1, -40, 0, 25)
+subtitle.Position = UDim2.new(0, 20, 0, 125)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = "ESP & Lock System"
+subtitle.TextColor3 = Color3.fromRGB(180, 160, 220)
+subtitle.TextSize = 16
+subtitle.Font = Enum.Font.GothamMedium
+subtitle.TextXAlignment = Enum.TextXAlignment.Center
+subtitle.ZIndex = 2
+subtitle.Parent = mainFrame
+
+-- Version text
+local versionText = Instance.new("TextLabel")
+versionText.Size = UDim2.new(1, -40, 0, 20)
+versionText.Position = UDim2.new(0, 20, 0, 150)
+versionText.BackgroundTransparency = 1
+versionText.Text = "v1.1"
+versionText.TextColor3 = Color3.fromRGB(120, 100, 150)
+versionText.TextSize = 12
+versionText.Font = Enum.Font.Gotham
+versionText.TextXAlignment = Enum.TextXAlignment.Center
+versionText.ZIndex = 2
+versionText.Parent = mainFrame
+
+-- Open Button (hidden initially)
+local openButton = Instance.new("TextButton")
+openButton.Size = UDim2.new(0, 220, 0, 50)
+openButton.Position = UDim2.new(0.5, -110, 0, 200)
+openButton.BackgroundColor3 = Color3.fromRGB(120, 80, 200)
+openButton.BorderSizePixel = 0
+openButton.Text = "OPEN"
+openButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+openButton.TextSize = 22
+openButton.Font = Enum.Font.GothamBold
+openButton.Visible = false
+openButton.AutoButtonColor = false
+openButton.ZIndex = 2
+openButton.Parent = mainFrame
+
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 12)
+buttonCorner.Parent = openButton
+
+local buttonStroke = Instance.new("UIStroke")
+buttonStroke.Color = Color3.fromRGB(180, 140, 255)
+buttonStroke.Thickness = 2
+buttonStroke.Transparency = 0.5
+buttonStroke.Parent = openButton
+
+-- Button gradient
+local buttonGradient = Instance.new("UIGradient")
+buttonGradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(140, 100, 220)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 60, 180))
+}
+buttonGradient.Rotation = 90
+buttonGradient.Parent = openButton
+
+-- Loading animation
+task.spawn(function()
+	wait(1.5)
+	openButton.Visible = true
+	
+	openButton.BackgroundTransparency = 1
+	openButton.TextTransparency = 1
+	
+	local fadeIn = game:GetService("TweenService"):Create(openButton, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		BackgroundTransparency = 0,
+		TextTransparency = 0
+	})
+	fadeIn:Play()
+end)
+
+-- Create Toggles Menu (hidden initially)
+local togglesFrame = Instance.new("Frame")
+togglesFrame.Size = UDim2.new(0, 450, 0, 370)
+togglesFrame.Position = UDim2.new(0.5, -225, 0.5, -185)
+togglesFrame.BackgroundColor3 = Color3.fromRGB(15, 10, 20)
+togglesFrame.BorderSizePixel = 0
+togglesFrame.Visible = false
+togglesFrame.Parent = screenGui
+
+local togglesCorner = Instance.new("UICorner")
+togglesCorner.CornerRadius = UDim.new(0, 20)
+togglesCorner.Parent = togglesFrame
+
+local togglesOverlay = Instance.new("Frame")
+togglesOverlay.Size = UDim2.new(1, 0, 1, 0)
+togglesOverlay.BackgroundColor3 = Color3.fromRGB(10, 5, 15)
+togglesOverlay.BackgroundTransparency = 0.3
+togglesOverlay.BorderSizePixel = 0
+togglesOverlay.Parent = togglesFrame
+
+local togglesGradient = Instance.new("UIGradient")
+togglesGradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 15, 45)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 10, 30)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 5, 25))
+}
+togglesGradient.Rotation = 135
+togglesGradient.Parent = togglesOverlay
+
+local togglesGlow = Instance.new("UIStroke")
+togglesGlow.Color = Color3.fromRGB(150, 100, 255)
+togglesGlow.Thickness = 2
+togglesGlow.Transparency = 0.3
+togglesGlow.Parent = togglesFrame
+
+local togglesAccentLine = Instance.new("Frame")
+togglesAccentLine.Size = UDim2.new(1, 0, 0, 4)
+togglesAccentLine.BackgroundColor3 = Color3.fromRGB(150, 100, 255)
+togglesAccentLine.BorderSizePixel = 0
+togglesAccentLine.ZIndex = 2
+togglesAccentLine.Parent = togglesFrame
+
+-- Toggles Title
+local togglesTitle = Instance.new("TextLabel")
+togglesTitle.Size = UDim2.new(1, -40, 0, 50)
+togglesTitle.Position = UDim2.new(0, 20, 0, 20)
+togglesTitle.BackgroundTransparency = 1
+togglesTitle.Text = "Toggles"
+togglesTitle.TextColor3 = Color3.fromRGB(200, 180, 255)
+togglesTitle.TextSize = 28
+togglesTitle.Font = Enum.Font.GothamBold
+togglesTitle.TextXAlignment = Enum.TextXAlignment.Left
+togglesTitle.ZIndex = 2
+togglesTitle.Parent = togglesFrame
+
+-- Underline
+local underline = Instance.new("Frame")
+underline.Size = UDim2.new(0, 120, 0, 2)
+underline.Position = UDim2.new(0, 20, 0, 65)
+underline.BackgroundColor3 = Color3.fromRGB(150, 100, 255)
+underline.BorderSizePixel = 0
+underline.ZIndex = 2
+underline.Parent = togglesFrame
+
+-- ESP Toggle Row
+local espRow = Instance.new("Frame")
+espRow.Size = UDim2.new(1, -40, 0, 50)
+espRow.Position = UDim2.new(0, 20, 0, 100)
+espRow.BackgroundTransparency = 1
+espRow.ZIndex = 2
+espRow.Parent = togglesFrame
+
+local espCheckbox = Instance.new("TextButton")
+espCheckbox.Size = UDim2.new(0, 40, 0, 40)
+espCheckbox.Position = UDim2.new(0, 0, 0, 5)
+espCheckbox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+espCheckbox.BorderSizePixel = 0
+espCheckbox.Text = ""
+espCheckbox.ZIndex = 2
+espCheckbox.Parent = espRow
+
+local espCheckCorner = Instance.new("UICorner")
+espCheckCorner.CornerRadius = UDim.new(0, 8)
+espCheckCorner.Parent = espCheckbox
+
+local espCheckStroke = Instance.new("UIStroke")
+espCheckStroke.Color = Color3.fromRGB(100, 80, 150)
+espCheckStroke.Thickness = 2
+espCheckStroke.Parent = espCheckbox
+
+local espCheckmark = Instance.new("TextLabel")
+espCheckmark.Size = UDim2.new(1, 0, 1, 0)
+espCheckmark.BackgroundTransparency = 1
+espCheckmark.Text = "✓"
+espCheckmark.TextColor3 = Color3.fromRGB(150, 100, 255)
+espCheckmark.TextSize = 28
+espCheckmark.Font = Enum.Font.GothamBold
+espCheckmark.Visible = false
+espCheckmark.ZIndex = 3
+espCheckmark.Parent = espCheckbox
+
+local espLabel = Instance.new("TextLabel")
+espLabel.Size = UDim2.new(0, 100, 0, 40)
+espLabel.Position = UDim2.new(0, 55, 0, 5)
+espLabel.BackgroundTransparency = 1
+espLabel.Text = "ESP"
+espLabel.TextColor3 = Color3.fromRGB(200, 180, 255)
+espLabel.TextSize = 20
+espLabel.Font = Enum.Font.GothamBold
+espLabel.TextXAlignment = Enum.TextXAlignment.Left
+espLabel.ZIndex = 2
+espLabel.Parent = espRow
+
+local espKeybindButton = Instance.new("TextButton")
+espKeybindButton.Size = UDim2.new(0, 50, 0, 40)
+espKeybindButton.Position = UDim2.new(1, -50, 0, 5)
+espKeybindButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+espKeybindButton.BorderSizePixel = 0
+espKeybindButton.Text = "T"
+espKeybindButton.TextColor3 = Color3.fromRGB(200, 180, 255)
+espKeybindButton.TextSize = 18
+espKeybindButton.Font = Enum.Font.GothamBold
+espKeybindButton.ZIndex = 2
+espKeybindButton.Parent = espRow
+
+local espKeyCorner = Instance.new("UICorner")
+espKeyCorner.CornerRadius = UDim.new(0, 8)
+espKeyCorner.Parent = espKeybindButton
+
+local espKeyStroke = Instance.new("UIStroke")
+espKeyStroke.Color = Color3.fromRGB(100, 80, 150)
+espKeyStroke.Thickness = 2
+espKeyStroke.Parent = espKeybindButton
+
+-- Lock Toggle Row
+local lockRow = Instance.new("Frame")
+lockRow.Size = UDim2.new(1, -40, 0, 50)
+lockRow.Position = UDim2.new(0, 20, 0, 170)
+lockRow.BackgroundTransparency = 1
+lockRow.ZIndex = 2
+lockRow.Parent = togglesFrame
+
+local lockCheckbox = Instance.new("TextButton")
+lockCheckbox.Size = UDim2.new(0, 40, 0, 40)
+lockCheckbox.Position = UDim2.new(0, 0, 0, 5)
+lockCheckbox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+lockCheckbox.BorderSizePixel = 0
+lockCheckbox.Text = ""
+lockCheckbox.ZIndex = 2
+lockCheckbox.Parent = lockRow
+
+local lockCheckCorner = Instance.new("UICorner")
+lockCheckCorner.CornerRadius = UDim.new(0, 8)
+lockCheckCorner.Parent = lockCheckbox
+
+local lockCheckStroke = Instance.new("UIStroke")
+lockCheckStroke.Color = Color3.fromRGB(100, 80, 150)
+lockCheckStroke.Thickness = 2
+lockCheckStroke.Parent = lockCheckbox
+
+local lockCheckmark = Instance.new("TextLabel")
+lockCheckmark.Size = UDim2.new(1, 0, 1, 0)
+lockCheckmark.BackgroundTransparency = 1
+lockCheckmark.Text = "✓"
+lockCheckmark.TextColor3 = Color3.fromRGB(150, 100, 255)
+lockCheckmark.TextSize = 28
+lockCheckmark.Font = Enum.Font.GothamBold
+lockCheckmark.Visible = false
+lockCheckmark.ZIndex = 3
+lockCheckmark.Parent = lockCheckbox
+
+local lockLabel = Instance.new("TextLabel")
+lockLabel.Size = UDim2.new(0, 100, 0, 40)
+lockLabel.Position = UDim2.new(0, 55, 0, 5)
+lockLabel.BackgroundTransparency = 1
+lockLabel.Text = "Lock"
+lockLabel.TextColor3 = Color3.fromRGB(200, 180, 255)
+lockLabel.TextSize = 20
+lockLabel.Font = Enum.Font.GothamBold
+lockLabel.TextXAlignment = Enum.TextXAlignment.Left
+lockLabel.ZIndex = 2
+lockLabel.Parent = lockRow
+
+local lockKeybindButton = Instance.new("TextButton")
+lockKeybindButton.Size = UDim2.new(0, 50, 0, 40)
+lockKeybindButton.Position = UDim2.new(1, -50, 0, 5)
+lockKeybindButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+lockKeybindButton.BorderSizePixel = 0
+lockKeybindButton.Text = "E"
+lockKeybindButton.TextColor3 = Color3.fromRGB(200, 180, 255)
+lockKeybindButton.TextSize = 18
+lockKeybindButton.Font = Enum.Font.GothamBold
+lockKeybindButton.ZIndex = 2
+lockKeybindButton.Parent = lockRow
+
+local lockKeyCorner = Instance.new("UICorner")
+lockKeyCorner.CornerRadius = UDim.new(0, 8)
+lockKeyCorner.Parent = lockKeybindButton
+
+local lockKeyStroke = Instance.new("UIStroke")
+lockKeyStroke.Color = Color3.fromRGB(100, 80, 150)
+lockKeyStroke.Thickness = 2
+lockKeyStroke.Parent = lockKeybindButton
+
+-- Close GUI Toggle Row
+local closeGuiRow = Instance.new("Frame")
+closeGuiRow.Size = UDim2.new(1, -40, 0, 50)
+closeGuiRow.Position = UDim2.new(0, 20, 0, 240)
+closeGuiRow.BackgroundTransparency = 1
+closeGuiRow.ZIndex = 2
+closeGuiRow.Parent = togglesFrame
+
+local closeGuiLabel = Instance.new("TextLabel")
+closeGuiLabel.Size = UDim2.new(0, 200, 0, 40)
+closeGuiLabel.Position = UDim2.new(0, 0, 0, 5)
+closeGuiLabel.BackgroundTransparency = 1
+closeGuiLabel.Text = "Close GUI"
+closeGuiLabel.TextColor3 = Color3.fromRGB(200, 180, 255)
+closeGuiLabel.TextSize = 20
+closeGuiLabel.Font = Enum.Font.GothamBold
+closeGuiLabel.TextXAlignment = Enum.TextXAlignment.Left
+closeGuiLabel.ZIndex = 2
+closeGuiLabel.Parent = closeGuiRow
+
+local closeGuiKeybindButton = Instance.new("TextButton")
+closeGuiKeybindButton.Size = UDim2.new(0, 100, 0, 40)
+closeGuiKeybindButton.Position = UDim2.new(1, -100, 0, 5)
+closeGuiKeybindButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+closeGuiKeybindButton.BorderSizePixel = 0
+closeGuiKeybindButton.Text = "LeftAlt"
+closeGuiKeybindButton.TextColor3 = Color3.fromRGB(200, 180, 255)
+closeGuiKeybindButton.TextSize = 16
+closeGuiKeybindButton.Font = Enum.Font.GothamBold
+closeGuiKeybindButton.ZIndex = 2
+closeGuiKeybindButton.Parent = closeGuiRow
+
+local closeGuiKeyCorner = Instance.new("UICorner")
+closeGuiKeyCorner.CornerRadius = UDim.new(0, 8)
+closeGuiKeyCorner.Parent = closeGuiKeybindButton
+
+local closeGuiKeyStroke = Instance.new("UIStroke")
+closeGuiKeyStroke.Color = Color3.fromRGB(100, 80, 150)
+closeGuiKeyStroke.Thickness = 2
+closeGuiKeyStroke.Parent = closeGuiKeybindButton
+
+-- Open button click handler
+openButton.MouseButton1Click:Connect(function()
+	local shrink = game:GetService("TweenService"):Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+		Size = UDim2.new(0, 0, 0, 0)
+	})
+	shrink:Play()
+	
+	shrink.Completed:Connect(function()
+		mainFrame.Visible = false
+		togglesFrame.Visible = true
+		togglesFrame.Size = UDim2.new(0, 0, 0, 0)
+		local grow = game:GetService("TweenService"):Create(togglesFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Size = UDim2.new(0, 450, 0, 370)
+		})
+		grow:Play()
+	end)
+	
+	scriptEnabled = true
+end)
+
+-- Hover effects
+openButton.MouseEnter:Connect(function()
+	local hover = game:GetService("TweenService"):Create(openButton, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+		BackgroundColor3 = Color3.fromRGB(160, 120, 255),
+		Size = UDim2.new(0, 230, 0, 54)
+	})
+	hover:Play()
+end)
+
+openButton.MouseLeave:Connect(function()
+	local leave = game:GetService("TweenService"):Create(openButton, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+		BackgroundColor3 = Color3.fromRGB(120, 80, 200),
+		Size = UDim2.new(0, 220, 0, 50)
+	})
+	leave:Play()
+end)
+
+-- ESP Checkbox toggle
+espCheckbox.MouseButton1Click:Connect(function()
+	outlinesEnabled = not outlinesEnabled
+	espCheckmark.Visible = outlinesEnabled
+	
+	if outlinesEnabled then
+		addOutlinesToAllPlayers()
+		espCheckbox.BackgroundColor3 = Color3.fromRGB(100, 60, 180)
+	else
+		removeAllOutlines()
+		espCheckbox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+	end
+end)
+
+-- Lock Checkbox (just visual, lock is activated by keybind)
+local lockEnabled = false
+lockCheckbox.MouseButton1Click:Connect(function()
+	lockEnabled = not lockEnabled
+	lockCheckmark.Visible = lockEnabled
+	
+	if lockEnabled then
+		lockCheckbox.BackgroundColor3 = Color3.fromRGB(100, 60, 180)
+	else
+		lockCheckbox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+		if lockedPlayer then
+			unlockCamera()
+		end
+	end
+end)
+
+-- ESP Keybind button
+espKeybindButton.MouseButton1Click:Connect(function()
+	waitingForKeybind = "esp"
+	espKeybindButton.Text = "..."
+	espKeybindButton.BackgroundColor3 = Color3.fromRGB(100, 60, 180)
+end)
+
+-- Lock Keybind button
+lockKeybindButton.MouseButton1Click:Connect(function()
+	waitingForKeybind = "lock"
+	lockKeybindButton.Text = "..."
+	lockKeybindButton.BackgroundColor3 = Color3.fromRGB(100, 60, 180)
+end)
+
+-- Close GUI Keybind button
+closeGuiKeybindButton.MouseButton1Click:Connect(function()
+	waitingForKeybind = "closeGui"
+	closeGuiKeybindButton.Text = "..."
+	closeGuiKeybindButton.BackgroundColor3 = Color3.fromRGB(100, 60, 180)
+end)
+
+-- Keybind listener
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	
+	-- Handle keybind remapping
+	if waitingForKeybind then
+		if input.UserInputType == Enum.UserInputType.Keyboard then
+			if waitingForKeybind == "esp" then
+				espKeybind = input.KeyCode
+				espKeybindButton.Text = input.KeyCode.Name
+				espKeybindButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+			elseif waitingForKeybind == "lock" then
+				lockKeybind = input.KeyCode
+				lockKeybindButton.Text = input.KeyCode.Name
+				lockKeybindButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+			elseif waitingForKeybind == "closeGui" then
+				toggleGuiKeybind = input.KeyCode
+				closeGuiKeybindButton.Text = input.KeyCode.Name
+				closeGuiKeybindButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+			end
+			waitingForKeybind = nil
+		end
+		return
+	end
+	
+	if not scriptEnabled then return end
+	
+	-- Toggle GUI visibility
+	if input.KeyCode == toggleGuiKeybind then
+		togglesFrame.Visible = not togglesFrame.Visible
+		return
+	end
+	
+	-- ESP toggle
+	if input.KeyCode == espKeybind then
+		outlinesEnabled = not outlinesEnabled
+		espCheckmark.Visible = outlinesEnabled
+		
+		if outlinesEnabled then
+			addOutlinesToAllPlayers()
+			espCheckbox.BackgroundColor3 = Color3.fromRGB(100, 60, 180)
+		else
+			removeAllOutlines()
+			espCheckbox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+		end
+	end
+	
+	-- Lock toggle
+	if input.KeyCode == lockKeybind and lockEnabled then
+		if lockedPlayer then
+			unlockCamera()
+		else
+			local nearestPlayer = getNearestPlayerToCrosshair()
+			if nearestPlayer then
+				lockOntoPlayer(nearestPlayer)
+			end
+		end
+	end
+end)
+
+-- Function to create a highlight for a character
+local function createHighlight(character)
+	if highlights[character] then return end
+	
+	local highlight = Instance.new("Highlight")
+	highlight.Adornee = character
+	highlight.FillColor = Color3.fromRGB(0, 255, 0)
+	highlight.OutlineColor = Color3.fromRGB(0, 200, 0)
+	highlight.FillTransparency = 0.5
+	highlight.OutlineTransparency = 0
+	highlight.Parent = character
+	
+	highlights[character] = highlight
+	
+	-- Create name tag
+	local head = character:FindFirstChild("Head")
+	if head then
+		local billboardGui = Instance.new("BillboardGui")
+		billboardGui.Name = "ESPNameTag"
+		billboardGui.Adornee = head
+		billboardGui.Size = UDim2.new(0, 200, 0, 50)
+		billboardGui.StudsOffset = Vector3.new(0, 2, 0)
+		billboardGui.AlwaysOnTop = true
+		billboardGui.Parent = head
+		
+		local nameLabel = Instance.new("TextLabel")
+		nameLabel.Size = UDim2.new(1, 0, 1, 0)
+		nameLabel.BackgroundTransparency = 1
+		nameLabel.Text = character.Name
+		nameLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+		nameLabel.TextStrokeTransparency = 0.5
+		nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+		nameLabel.TextSize = 18
+		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.Parent = billboardGui
+	end
+end
+
+-- Function to remove highlight from a character
+local function removeHighlight(character)
+	if highlights[character] then
+		highlights[character]:Destroy()
+		highlights[character] = nil
+	end
+	
+	-- Remove name tag
+	local head = character:FindFirstChild("Head")
+	if head then
+		local nameTag = head:FindFirstChild("ESPNameTag")
+		if nameTag then
+			nameTag:Destroy()
+		end
+	end
+end
+
+-- Function to add highlights to all players
+function addOutlinesToAllPlayers()
+	for _, plr in pairs(Players:GetPlayers()) do
+		if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+			createHighlight(plr.Character)
+		end
+	end
+end
+
+-- Function to remove all highlights
+function removeAllOutlines()
+	for character, highlight in pairs(highlights) do
+		highlight:Destroy()
+		
+		-- Remove name tag when clearing all
+		local head = character:FindFirstChild("Head")
+		if head then
+			local nameTag = head:FindFirstChild("ESPNameTag")
+			if nameTag then
+				nameTag:Destroy()
+			end
+		end
+	end
+	highlights = {}
+end
+
+-- Function to get the nearest player to crosshair
+function getNearestPlayerToCrosshair()
+	local nearestPlayer = nil
+	local shortestDistance = math.huge
+	local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
+	
+	for _, plr in pairs(Players:GetPlayers()) do
+		if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+			local character = plr.Character
+			local hrp = character.HumanoidRootPart
+			
+			local screenPos, onScreen = camera:WorldToViewportPoint(hrp.Position)
+			
+			if onScreen then
+				local screenPos2D = Vector2.new(screenPos.X, screenPos.Y)
+				local distance = (screenPos2D - screenCenter).Magnitude
+				
+				if distance < shortestDistance then
+					shortestDistance = distance
+					nearestPlayer = plr
+				end
+			end
+		end
+	end
+	
+	return nearestPlayer
+end
+
+-- Function to lock camera onto a player
+function lockOntoPlayer(targetPlayer)
+	if lockConnection then
+		lockConnection:Disconnect()
+		lockConnection = nil
+	end
+	
+	lockedPlayer = targetPlayer
+	
+	if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+		lockConnection = RunService.RenderStepped:Connect(function()
+			if lockedPlayer and lockedPlayer.Character and lockedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+				local targetPos = lockedPlayer.Character.HumanoidRootPart.Position
+				camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
+			else
+				unlockCamera()
+			end
+		end)
+	end
+end
+
+-- Function to unlock camera
+function unlockCamera()
+	if lockConnection then
+		lockConnection:Disconnect()
+		lockConnection = nil
+	end
+	lockedPlayer = nil
+end
+
+-- Handle new players joining
+local function onPlayerAdded(plr)
+	plr.CharacterAdded:Connect(function(character)
+		if outlinesEnabled then
+			task.wait(0.1)
+			createHighlight(character)
+		end
+	end)
+end
+
+-- Handle player leaving
+local function onPlayerRemoving(plr)
+	if plr.Character then
+		removeHighlight(plr.Character)
+	end
+	
+	if plr == lockedPlayer then
+		unlockCamera()
+	end
+end
+
+-- Connect player events
+Players.PlayerAdded:Connect(onPlayerAdded)
+Players.PlayerRemoving:Connect(onPlayerRemoving)
+
+-- Setup existing players
+for _, plr in pairs(Players:GetPlayers()) do
+	onPlayerAdded(plr)
+end
