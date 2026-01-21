@@ -10,7 +10,7 @@ local GetService = setmetatable({}, {
 })
 
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/thugging/the-warehouse-storage/refs/heads/main/archive/others/cattoware.lua"))()
-local NotifyLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinlei/Dynissimo/main/Scripts/AkaliNotif.lua"))()
+local NotifyLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/thugging/the-warehouse-storage/refs/heads/main/archive/others/AkaliNotif.lua"))()
 local Notify = NotifyLibrary.Notify
 Library.theme.accentcolor = Color3.new(0.603921, 0.011764, 1)
 
