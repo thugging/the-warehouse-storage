@@ -29,19 +29,21 @@ local SettingsTab = Library:CreateSettingsPage(Window, Watermark, KeybindList)
 local TogglesSubtab = HitsoundTab:SubPage({Icon = "94324346713012", Columns = 2})
 local SoundsSubtab = HitsoundTab:SubPage({Icon = "135757045959142", Columns = 2})
 
--- Sound storage directory
-local SoundsDirectory = Library.Folders.Directory .. "/sounds"
+-- Sound storage directory - FIXED PATH
+local SoundsDirectory = "hit.sound"
 if not isfolder(SoundsDirectory) then
     makefolder(SoundsDirectory)
 end
 
 -- Custom sound URLs (add new custom sounds here)
+-- NOTE: Roblox getcustomasset() works best with .ogg format
+-- If using .mp3 or .wav, results may vary by executor
 local customSoundURLs = {
-    ["Sonic"] = "https://github.com/thugging/the-warehouse-storage/raw/refs/heads/main/archive/others/sounds/sonic.wav"
+    ["Sonic"] = {url = "https://github.com/thugging/the-warehouse-storage/raw/refs/heads/main/archive/others/sounds/sonic.wav", ext = ".wav"},
+    ["Carlos"] = {url = "https://github.com/thugging/the-warehouse-storage/raw/refs/heads/main/archive/others/sounds/carlos.wav", ext = ".wav"}
 }
 
 -- SINGLE SOURCE OF TRUTH FOR ALL SOUNDS
--- Just edit this table to add/remove sounds!
 local SoundDatabase = {
     Popular = {
         {name = "Neverlose", id = "97643101798871"},
@@ -70,7 +72,8 @@ local SoundDatabase = {
     },
     
     Custom = {
-        {name = "Sonic", id = "custom_sonic"}
+        {name = "Sonic", id = "custom_sonic"},
+        {name = "Carlos", id = "custom_carlos"}
     }
 }
 
@@ -83,36 +86,45 @@ local function getCustomSound(soundName)
         return CustomSounds[soundName]
     end
     
-    local url = customSoundURLs[soundName]
-    if not url then
+    local soundData = customSoundURLs[soundName]
+    if not soundData then
         warn("No URL found for custom sound: " .. soundName)
         return nil
     end
     
-    local fileName = soundName .. ".wav"
+    local url = soundData.url
+    local ext = soundData.ext or ".wav"
+    local fileName = soundName .. ext
     local filePath = SoundsDirectory .. "/" .. fileName
     
     -- Check if file already exists
     if not isfile(filePath) then
         -- Download the file
         local success, result = pcall(function()
-            local soundData = game:HttpGet(url)
-            writefile(filePath, soundData)
+            warn("Downloading: " .. soundName .. " from " .. url)
+            local audioData = game:HttpGet(url)
+            writefile(filePath, audioData)
+            warn("Successfully saved: " .. filePath)
         end)
         
         if not success then
             warn("Failed to download custom sound: " .. soundName .. " - " .. tostring(result))
             return nil
         end
+    else
+        warn("File already exists: " .. filePath)
     end
     
     -- Get the custom asset path
     local success, assetPath = pcall(function()
-        return getcustomasset(filePath)
+        local path = getcustomasset(filePath)
+        warn("Custom asset path for " .. soundName .. ": " .. tostring(path))
+        return path
     end)
     
     if not success then
         warn("Failed to get custom asset path for: " .. soundName .. " - " .. tostring(assetPath))
+        warn("This might be due to file format incompatibility. Try converting to .ogg format.")
         return nil
     end
     
@@ -129,17 +141,36 @@ local function preloadCustomSounds()
     task.spawn(function()
         Library:Notification("Downloading custom sounds...", 2, Color3.fromRGB(255, 200, 100))
         
-        for soundName, url in pairs(customSoundURLs) do
+        local successCount = 0
+        local failCount = 0
+        
+        for soundName, soundData in pairs(customSoundURLs) do
             local success = pcall(function()
-                getCustomSound(soundName)
+                local result = getCustomSound(soundName)
+                if result then
+                    successCount = successCount + 1
+                    Library:Notification("✓ " .. soundName, 1, Color3.fromRGB(0, 255, 0))
+                else
+                    failCount = failCount + 1
+                    Library:Notification("✗ " .. soundName .. " (format issue)", 2, Color3.fromRGB(255, 100, 0))
+                end
             end)
             
             if not success then
+                failCount = failCount + 1
+                Library:Notification("✗ " .. soundName .. " (download failed)", 2, Color3.fromRGB(255, 0, 0))
                 warn("Failed to preload custom sound: " .. soundName)
             end
+            
+            task.wait(0.5) -- Small delay between downloads
         end
         
-        Library:Notification("Custom sounds ready!", 2, Color3.fromRGB(0, 255, 0))
+        if successCount > 0 then
+            Library:Notification(successCount .. " sounds ready!", 2, Color3.fromRGB(0, 255, 0))
+        end
+        if failCount > 0 then
+            Library:Notification(failCount .. " sounds failed (try .ogg format)", 3, Color3.fromRGB(255, 150, 0))
+        end
     end)
 end
 
@@ -527,13 +558,24 @@ do
             end
         end
     })
+    
+    ControlsSection:Button({
+        Name = "Download Custom Sounds",
+        Callback = function()
+            if soundsPreloaded then
+                Library:Notification("Sounds already downloaded!", 2, Color3.fromRGB(255, 200, 100))
+            else
+                preloadCustomSounds()
+            end
+        end
+    })
 end
 
 -- UI Setup - Sounds Subtab
 do
     local PopularSection = SoundsSubtab:Section({Name = "Popular Sounds", Side = 1})
+    local CustomSoundsSection = SoundsSubtab:Section({Name = "Custom Sounds", Side = 1})
     local MoreSoundsSection = SoundsSubtab:Section({Name = "More Sounds", Side = 2})
-    local CustomSoundsSection = SoundsSubtab:Section({Name = "Custom Sounds", Side = 2})
     
     -- Helper function to create button for a sound
     local function createSoundButton(section, sound)
@@ -542,6 +584,7 @@ do
             Callback = function()
                 if string.find(sound.id, "custom_") and not soundsPreloaded then
                     preloadCustomSounds()
+                    task.wait(1) -- Wait for download
                 end
                 
                 playPreviewSound(sound.id)
@@ -559,13 +602,13 @@ do
     for _, sound in ipairs(SoundDatabase.Popular) do
         createSoundButton(PopularSection, sound)
     end
-
-    for _, sound in ipairs(SoundDatabase.More) do
-        createSoundButton(MoreSoundsSection, sound)
-    end
     
     for _, sound in ipairs(SoundDatabase.Custom) do
         createSoundButton(CustomSoundsSection, sound)
+    end
+
+    for _, sound in ipairs(SoundDatabase.More) do
+        createSoundButton(MoreSoundsSection, sound)
     end
 end
 
