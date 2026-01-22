@@ -1,4 +1,4 @@
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/thugging/the-warehouse-storage/refs/heads/main/archive/others/thugsenselibrary.lua"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/sametexe001/sametlibs/refs/heads/main/Thugsense/Library.lua"))()
 
 -- Services
 local Players = game:GetService("Players")
@@ -29,6 +29,120 @@ local SettingsTab = Library:CreateSettingsPage(Window, Watermark, KeybindList)
 local TogglesSubtab = HitsoundTab:SubPage({Icon = "94324346713012", Columns = 2})
 local SoundsSubtab = HitsoundTab:SubPage({Icon = "135757045959142", Columns = 2})
 
+-- Sound storage directory
+local SoundsDirectory = Library.Folders.Directory .. "/sounds"
+if not isfolder(SoundsDirectory) then
+    makefolder(SoundsDirectory)
+end
+
+-- Custom sound URLs (add new custom sounds here)
+local customSoundURLs = {
+    ["Sonic"] = "https://github.com/thugging/the-warehouse-storage/raw/refs/heads/main/archive/others/sounds/sonic.wav"
+}
+
+-- SINGLE SOURCE OF TRUTH FOR ALL SOUNDS
+-- Just edit this table to add/remove sounds!
+local SoundDatabase = {
+    Popular = {
+        {name = "Neverlose", id = "97643101798871"},
+        {name = "Skeet", id = "5447626464"},
+        {name = "COD", id = "5952120301"},
+        {name = "Minecraft Hit", id = "4018616850"},
+        {name = "Fatality", id = "106586644436584"}
+    },
+    
+    More = {
+        {name = "Gamesense", id = "83717596220569"},
+        {name = "Headshot SFX Loud", id = "120486333060629"},
+        {name = "Headshot SFX Quiet", id = "111136905489334"},
+        {name = "Rifk", id = "76064874887167"},
+        {name = "Balloon Pop SFX", id = "7948526859"},
+        {name = "Bameware", id = "92614567965693"},
+        {name = "Primordial", id = "85340682645435"},
+        {name = "1 Sit NN Dog", id = "7380502345"},
+        {name = "Skull Kid Laugh", id = "98691104332782"},
+        {name = "Minecraft Ding", id = "131197435969853"},
+        {name = "Minecraft Pickup", id = "140303363726378"},
+        {name = "Minecraft Throw", id = "129408561095225"},
+        {name = "donk", id = "18576952145"},
+        {name = "Ultrakill Parry (+heal)", id = "98660468032974"},
+        {name = "Ultrakill Parry (-heal)", id = "126570676614497"}
+    },
+    
+    Custom = {
+        {name = "Sonic", id = "custom_sonic"}
+    }
+}
+
+-- Custom sound management
+local CustomSounds = {}
+
+-- Function to download and cache custom sounds
+local function getCustomSound(soundName)
+    if CustomSounds[soundName] then
+        return CustomSounds[soundName]
+    end
+    
+    local url = customSoundURLs[soundName]
+    if not url then
+        warn("No URL found for custom sound: " .. soundName)
+        return nil
+    end
+    
+    local fileName = soundName .. ".wav"
+    local filePath = SoundsDirectory .. "/" .. fileName
+    
+    -- Check if file already exists
+    if not isfile(filePath) then
+        -- Download the file
+        local success, result = pcall(function()
+            local soundData = game:HttpGet(url)
+            writefile(filePath, soundData)
+        end)
+        
+        if not success then
+            warn("Failed to download custom sound: " .. soundName .. " - " .. tostring(result))
+            return nil
+        end
+    end
+    
+    -- Get the custom asset path
+    local success, assetPath = pcall(function()
+        return getcustomasset(filePath)
+    end)
+    
+    if not success then
+        warn("Failed to get custom asset path for: " .. soundName .. " - " .. tostring(assetPath))
+        return nil
+    end
+    
+    CustomSounds[soundName] = assetPath
+    return assetPath
+end
+
+-- Pre-download custom sounds
+local soundsPreloaded = false
+local function preloadCustomSounds()
+    if soundsPreloaded then return end
+    soundsPreloaded = true
+    
+    task.spawn(function()
+        Library:Notification("Downloading custom sounds...", 2, Color3.fromRGB(255, 200, 100))
+        
+        for soundName, url in pairs(customSoundURLs) do
+            local success = pcall(function()
+                getCustomSound(soundName)
+            end)
+            
+            if not success then
+                warn("Failed to preload custom sound: " .. soundName)
+            end
+        end
+        
+        Library:Notification("Custom sounds ready!", 2, Color3.fromRGB(0, 255, 0))
+    end)
+end
+
 -- Hitsound Variables
 local HitsoundSettings = {
     Enabled = false,
@@ -44,6 +158,7 @@ local HitsoundSettings = {
     
     -- Sound instance management
     CurrentSound = nil,
+    PreviewSound = nil
 }
 
 -- Play hitsound function with instance management
@@ -63,7 +178,23 @@ local function playHitsound()
     
     -- Create new sound
     local sound = Instance.new("Sound")
-    sound.SoundId = "rbxassetid://" .. HitsoundSettings.SoundID
+    
+    -- Check if it's a custom sound
+    if string.find(HitsoundSettings.SoundID, "custom_") then
+        local soundName = string.gsub(HitsoundSettings.SoundID, "custom_", "")
+        soundName = soundName:sub(1,1):upper() .. soundName:sub(2)
+        local customPath = getCustomSound(soundName)
+        
+        if customPath then
+            sound.SoundId = customPath
+        else
+            warn("Failed to load custom sound, using default")
+            sound.SoundId = "rbxassetid://97643101798871"
+        end
+    else
+        sound.SoundId = "rbxassetid://" .. HitsoundSettings.SoundID
+    end
+    
     sound.Volume = HitsoundSettings.Volume
     sound.PlaybackSpeed = HitsoundSettings.PlaybackSpeed
     sound.Parent = SoundService
@@ -96,6 +227,63 @@ local function playHitsound()
     end)
 end
 
+-- Play preview sound function
+local function playPreviewSound(soundID)
+    -- Clean up existing preview sound
+    if HitsoundSettings.PreviewSound and HitsoundSettings.PreviewSound.Parent then
+        HitsoundSettings.PreviewSound:Stop()
+        HitsoundSettings.PreviewSound:Destroy()
+        HitsoundSettings.PreviewSound = nil
+    end
+    
+    -- Create new preview sound
+    local sound = Instance.new("Sound")
+    
+    -- Check if it's a custom sound
+    if string.find(soundID, "custom_") then
+        local soundName = string.gsub(soundID, "custom_", "")
+        soundName = soundName:sub(1,1):upper() .. soundName:sub(2)
+        local customPath = getCustomSound(soundName)
+        
+        if customPath then
+            sound.SoundId = customPath
+        else
+            warn("Failed to load custom sound for preview")
+            Library:Notification("Failed to load custom sound", 2, Color3.fromRGB(255, 0, 0))
+            return
+        end
+    else
+        sound.SoundId = "rbxassetid://" .. soundID
+    end
+    
+    sound.Volume = HitsoundSettings.Volume
+    sound.PlaybackSpeed = HitsoundSettings.PlaybackSpeed
+    sound.Parent = SoundService
+    
+    HitsoundSettings.PreviewSound = sound
+    sound:Play()
+    
+    -- Destroy after sound ends
+    sound.Ended:Connect(function()
+        if sound and sound.Parent then
+            sound:Destroy()
+        end
+        if HitsoundSettings.PreviewSound == sound then
+            HitsoundSettings.PreviewSound = nil
+        end
+    end)
+    
+    -- Fallback cleanup
+    task.delay(5, function()
+        if sound and sound.Parent then
+            sound:Destroy()
+        end
+        if HitsoundSettings.PreviewSound == sound then
+            HitsoundSettings.PreviewSound = nil
+        end
+    end)
+end
+
 -- Monitor when gun is being used
 RunService.Heartbeat:Connect(function()
     local character = player.Character
@@ -105,17 +293,14 @@ RunService.Heartbeat:Connect(function()
     
     local gun = character:FindFirstChildOfClass("Tool")
     if gun and gun:GetAttribute("ToolType") == "Gun" then
-        -- Method 1: Check the Local_IsShooting attribute (manual shooting)
         local shooting = gun:GetAttribute("Local_IsShooting")
-        
-        -- Method 2: Check if ammo is decreasing (works with auto-shoot)
         local currentAmmo = gun:GetAttribute("Local_CurrentAmmo")
+        
         if currentAmmo and HitsoundSettings.LastAmmoCount and currentAmmo < HitsoundSettings.LastAmmoCount then
             HitsoundSettings.LastShotTime = tick()
         end
         HitsoundSettings.LastAmmoCount = currentAmmo
         
-        -- Update last shot time if manually shooting
         if shooting then
             HitsoundSettings.LastShotTime = tick()
         end
@@ -133,10 +318,8 @@ local function trackPlayer(targetPlayer)
         local humanoid = char:FindFirstChild("Humanoid")
         if not humanoid then return end
         
-        -- Initialize health
         HitsoundSettings.PlayerHealths[targetPlayer.UserId] = humanoid.Health
         
-        -- Monitor health changes
         humanoid.HealthChanged:Connect(function(newHealth)
             local oldHealth = HitsoundSettings.PlayerHealths[targetPlayer.UserId]
             if not oldHealth then
@@ -144,13 +327,10 @@ local function trackPlayer(targetPlayer)
                 return
             end
             
-            -- Check if health decreased (took damage)
             if newHealth < oldHealth then
                 local timeSinceShot = tick() - HitsoundSettings.LastShotTime
                 
-                -- Check if we shot recently (within last 0.5 seconds)
                 if timeSinceShot < 0.5 then
-                    -- Verify they're on a different team or hostile
                     local isDifferentTeam = targetPlayer.Team ~= player.Team
                     local isHostile = char:GetAttribute("Hostile")
                     
@@ -160,11 +340,9 @@ local function trackPlayer(targetPlayer)
                 end
             end
             
-            -- Update stored health
             HitsoundSettings.PlayerHealths[targetPlayer.UserId] = newHealth
         end)
         
-        -- Handle death
         humanoid.Died:Connect(function()
             HitsoundSettings.PlayerHealths[targetPlayer.UserId] = nil
         end)
@@ -202,7 +380,6 @@ do
         Callback = function(Value)
             HitsoundSettings.Enabled = Value
             
-            -- Clean up sound when disabled
             if not Value and HitsoundSettings.CurrentSound then
                 if HitsoundSettings.CurrentSound.Parent then
                     HitsoundSettings.CurrentSound:Stop()
@@ -236,7 +413,6 @@ do
         Callback = function(Value)
             HitsoundSettings.AllowMultipleInstances = Value
             
-            -- Clean up current sound when switching to single instance mode
             if not Value and HitsoundSettings.CurrentSound then
                 if HitsoundSettings.CurrentSound.Parent then
                     HitsoundSettings.CurrentSound:Stop()
@@ -259,10 +435,38 @@ do
         Placeholder = "Enter sound ID...", 
         Default = "97643101798871",
         Callback = function(Value)
-            -- Remove any "rbxassetid://" prefix if user includes it
             Value = Value:gsub("rbxassetid://", "")
             HitsoundSettings.SoundID = Value
             Library:Notification("Sound ID updated to: " .. Value, 3, Color3.fromRGB(100, 200, 255))
+        end
+    })
+
+    -- Build dropdown items from SoundDatabase
+    local soundNames = {}
+    for category, sounds in pairs(SoundDatabase) do
+        for _, sound in ipairs(sounds) do
+            table.insert(soundNames, sound.name)
+        end
+    end
+
+    MainSection:Dropdown({
+        Name = "Sound Preset", 
+        Flag = "Hitsound_Preset",
+        Items = soundNames,
+        Default = "Neverlose",
+        Callback = function(Value)
+            for category, sounds in pairs(SoundDatabase) do
+                for _, sound in ipairs(sounds) do
+                    if sound.name == Value then
+                        HitsoundSettings.SoundID = sound.id
+                        if Library.SetFlags["Hitsound_SoundID"] then
+                            Library.SetFlags["Hitsound_SoundID"](sound.id)
+                        end
+                        Library:Notification("Sound changed to: " .. Value, 3, Color3.fromRGB(100, 200, 255))
+                        return
+                    end
+                end
+            end
         end
     })
 
@@ -329,51 +533,42 @@ end
 do
     local PopularSection = SoundsSubtab:Section({Name = "Popular Sounds", Side = 1})
     local MoreSoundsSection = SoundsSubtab:Section({Name = "More Sounds", Side = 2})
+    local CustomSoundsSection = SoundsSubtab:Section({Name = "Custom Sounds", Side = 2})
     
-    local popularSounds = {
-        {name = "Neverlose", id = "97643101798871"},
-        {name = "Skeet", id = "5447626464"},
-        {name = "COD", id = "5952120301"},
-        {name = "Minecraft", id = "4018616850"},
-        {name = "Fatality", id = "106586644436584"},
-    }
-
-    local moreSounds = {
-        {name = "Gamesense", id = "83717596220569"},
-        {name = "Headshot SFX Loud", id = "120486333060629"},
-        {name = "Headshot SFX Quiet", id = "111136905489334"},
-        {name = "Rifk", id = "76064874887167"},
-        {name = "Balloon Pop SFX", id = "7948526859"},
-        {name = "Bameware", id = "92614567965693"},
-        {name = "Primordial", id = "85340682645435"},
-        {name = "1 Sit NN Dog", id = "7380502345"},
-    }
-
-    for _, sound in ipairs(popularSounds) do
-        PopularSection:Button({
-            Name = sound.name .. " (" .. sound.id .. ")",
+    -- Helper function to create button for a sound
+    local function createSoundButton(section, sound)
+        section:Button({
+            Name = sound.name,
             Callback = function()
+                if string.find(sound.id, "custom_") and not soundsPreloaded then
+                    preloadCustomSounds()
+                end
+                
+                playPreviewSound(sound.id)
+                
                 HitsoundSettings.SoundID = sound.id
-                -- Update the textbox flag
-                Library.SetFlags["Hitsound_SoundID"](sound.id)
-                Library:Notification("Sound changed to: " .. sound.name, 3, Color3.fromRGB(100, 200, 255))
+                if Library.SetFlags["Hitsound_SoundID"] then
+                    Library.SetFlags["Hitsound_SoundID"](sound.id)
+                end
+                Library:Notification("Playing preview: " .. sound.name, 2, Color3.fromRGB(100, 200, 255))
             end
         })
     end
 
-    for _, sound in ipairs(moreSounds) do
-        MoreSoundsSection:Button({
-            Name = sound.name .. " (" .. sound.id .. ")",
-            Callback = function()
-                HitsoundSettings.SoundID = sound.id
-                -- Update the textbox flag
-                Library.SetFlags["Hitsound_SoundID"](sound.id)
-                Library:Notification("Sound changed to: " .. sound.name, 3, Color3.fromRGB(100, 200, 255))
-            end
-        })
+    -- Generate buttons from SoundDatabase
+    for _, sound in ipairs(SoundDatabase.Popular) do
+        createSoundButton(PopularSection, sound)
+    end
+
+    for _, sound in ipairs(SoundDatabase.More) do
+        createSoundButton(MoreSoundsSection, sound)
+    end
+    
+    for _, sound in ipairs(SoundDatabase.Custom) do
+        createSoundButton(CustomSoundsSection, sound)
     end
 end
 
-Library:Notification("hitsync loaded", 5, Library.Theme.Accent, {"rbxassetid://135757045959142", Color3.fromRGB(149, 255, 139)})
+Library:Notification("Hit.sound loaded", 5, Library.Theme.Accent, {"rbxassetid://135757045959142", Color3.fromRGB(149, 255, 139)})
 
 Library:Init()
