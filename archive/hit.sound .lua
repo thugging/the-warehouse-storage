@@ -1,15 +1,10 @@
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/sametexe001/sametlibs/refs/heads/main/Thugsense/Library.lua"))()
-
--- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
-
--- Local player
 local player = Players.LocalPlayer
 
--- Create Window
 local Window = Library:Window({
     Name = "Hit.sound",
     FadeSpeed = 0.25
@@ -21,29 +16,28 @@ local KeybindList = Library:KeybindList()
 Watermark:SetVisibility(false)
 KeybindList:SetVisibility(false)
 
--- Create Tabs with Subtabs
+-- tabs and create subtabs
 local HitsoundTab = Window:Page({Name = "Hitsound", Columns = 2, Subtabs = true})
 local SettingsTab = Library:CreateSettingsPage(Window, Watermark, KeybindList)
 
--- Create Subtabs
+-- subtans
 local TogglesSubtab = HitsoundTab:SubPage({Icon = "94324346713012", Columns = 2})
 local SoundsSubtab = HitsoundTab:SubPage({Icon = "135757045959142", Columns = 2})
 
--- Sound storage directory - FIXED PATH
 local SoundsDirectory = "hit.sound"
 if not isfolder(SoundsDirectory) then
     makefolder(SoundsDirectory)
 end
 
--- Custom sound URLs (add new custom sounds here)
--- NOTE: Roblox getcustomasset() works best with .ogg format
--- If using .mp3 or .wav, results may vary by executor
+-- custom sounds wav or ogg works
 local customSoundURLs = {
     ["Sonic"] = {url = "https://github.com/thugging/the-warehouse-storage/raw/refs/heads/main/archive/others/sounds/sonic.wav", ext = ".wav"},
-    ["Carlos"] = {url = "https://github.com/thugging/the-warehouse-storage/raw/refs/heads/main/archive/others/sounds/carlos.wav", ext = ".wav"}
+    ["Carlos"] = {url = "https://github.com/thugging/the-warehouse-storage/raw/refs/heads/main/archive/others/sounds/carlos.wav", ext = ".wav"},
+	["Quake"] = {url = "https://github.com/thugging/the-warehouse-storage/raw/refs/heads/main/archive/others/sounds/qbeep.wav", ext = ".wav"},
+	["Headshot"] = {url = "https://github.com/thugging/the-warehouse-storage/raw/refs/heads/main/archive/others/sounds/hs.wav", ext = ".wav"}
 }
 
--- SINGLE SOURCE OF TRUTH FOR ALL SOUNDS
+-- roblox asset id sounds
 local SoundDatabase = {
     Popular = {
         {name = "Neverlose", id = "97643101798871"},
@@ -73,15 +67,16 @@ local SoundDatabase = {
     
     Custom = {
         {name = "Sonic", id = "custom_sonic"},
-        {name = "Carlos", id = "custom_carlos"}
+        {name = "Carlos", id = "custom_carlos"},
+		{name = "Quake", id = "custom_quake"},
+		{name = "Headshot", id = "custom_headshot"}
     }
 }
 
--- Custom sound management
+-- custom sound management
 local CustomSounds = {}
 
--- Function to download and cache custom sounds
-local function getCustomSound(soundName)
+local function getCustomSound(soundName) -- download and cache
     if CustomSounds[soundName] then
         return CustomSounds[soundName]
     end
@@ -97,9 +92,9 @@ local function getCustomSound(soundName)
     local fileName = soundName .. ext
     local filePath = SoundsDirectory .. "/" .. fileName
     
-    -- Check if file already exists
+    -- file exists?
     if not isfile(filePath) then
-        -- Download the file
+        -- download the file
         local success, result = pcall(function()
             warn("Downloading: " .. soundName .. " from " .. url)
             local audioData = game:HttpGet(url)
@@ -115,7 +110,7 @@ local function getCustomSound(soundName)
         warn("File already exists: " .. filePath)
     end
     
-    -- Get the custom asset path
+    -- get the custom asset path
     local success, assetPath = pcall(function()
         local path = getcustomasset(filePath)
         warn("Custom asset path for " .. soundName .. ": " .. tostring(path))
@@ -132,7 +127,7 @@ local function getCustomSound(soundName)
     return assetPath
 end
 
--- Pre-download custom sounds
+-- custom sound predownloader
 local soundsPreloaded = false
 local function preloadCustomSounds()
     if soundsPreloaded then return end
@@ -162,7 +157,7 @@ local function preloadCustomSounds()
                 warn("Failed to preload custom sound: " .. soundName)
             end
             
-            task.wait(0.5) -- Small delay between downloads
+            task.wait(0.5) --delay between downloads
         end
         
         if successCount > 0 then
@@ -174,7 +169,7 @@ local function preloadCustomSounds()
     end)
 end
 
--- Hitsound Variables
+-- hitsound settings
 local HitsoundSettings = {
     Enabled = false,
     SoundID = "97643101798871",
@@ -182,23 +177,23 @@ local HitsoundSettings = {
     PlaybackSpeed = 1,
     AllowMultipleInstances = false,
     
-    -- Internal tracking
+    -- internal tracking
     LastShotTime = 0,
     LastAmmoCount = nil,
     PlayerHealths = {},
     
-    -- Sound instance management
+    -- sound instance management
     CurrentSound = nil,
     PreviewSound = nil
 }
 
--- Play hitsound function with instance management
+-- hitsound function 
 local function playHitsound()
     if not HitsoundSettings.Enabled then 
         return 
     end
     
-    -- Clean up existing sound if multiple instances are not allowed
+    -- if multiple hitsounds off cleanup
     if not HitsoundSettings.AllowMultipleInstances then
         if HitsoundSettings.CurrentSound and HitsoundSettings.CurrentSound.Parent then
             HitsoundSettings.CurrentSound:Stop()
@@ -207,11 +202,9 @@ local function playHitsound()
         end
     end
     
-    -- Create new sound
     local sound = Instance.new("Sound")
     
-    -- Check if it's a custom sound
-    if string.find(HitsoundSettings.SoundID, "custom_") then
+    if string.find(HitsoundSettings.SoundID, "custom_") then --checks if custom sound
         local soundName = string.gsub(HitsoundSettings.SoundID, "custom_", "")
         soundName = soundName:sub(1,1):upper() .. soundName:sub(2)
         local customPath = getCustomSound(soundName)
@@ -236,8 +229,7 @@ local function playHitsound()
     end
     
     sound:Play()
-    
-    -- Destroy after sound ends
+
     sound.Ended:Connect(function()
         if sound and sound.Parent then
             sound:Destroy()
@@ -247,7 +239,7 @@ local function playHitsound()
         end
     end)
     
-    -- Fallback cleanup
+    -- fallback cleanup
     task.delay(5, function()
         if sound and sound.Parent then
             sound:Destroy()
@@ -258,19 +250,19 @@ local function playHitsound()
     end)
 end
 
--- Play preview sound function
+-- preview sound function
 local function playPreviewSound(soundID)
-    -- Clean up existing preview sound
+    -- delete existing preview sound
     if HitsoundSettings.PreviewSound and HitsoundSettings.PreviewSound.Parent then
         HitsoundSettings.PreviewSound:Stop()
         HitsoundSettings.PreviewSound:Destroy()
         HitsoundSettings.PreviewSound = nil
     end
     
-    -- Create new preview sound
+    -- make new preview sound
     local sound = Instance.new("Sound")
     
-    -- Check if it's a custom sound
+    -- check if custom sound
     if string.find(soundID, "custom_") then
         local soundName = string.gsub(soundID, "custom_", "")
         soundName = soundName:sub(1,1):upper() .. soundName:sub(2)
@@ -294,7 +286,7 @@ local function playPreviewSound(soundID)
     HitsoundSettings.PreviewSound = sound
     sound:Play()
     
-    -- Destroy after sound ends
+    -- destroy after sound ends
     sound.Ended:Connect(function()
         if sound and sound.Parent then
             sound:Destroy()
@@ -304,7 +296,7 @@ local function playPreviewSound(soundID)
         end
     end)
     
-    -- Fallback cleanup
+    -- fallback cleanup
     task.delay(5, function()
         if sound and sound.Parent then
             sound:Destroy()
@@ -315,7 +307,7 @@ local function playPreviewSound(soundID)
     end)
 end
 
--- Monitor when gun is being used
+-- gun heartbeat (monitors if it is used or not)
 RunService.Heartbeat:Connect(function()
     local character = player.Character
     if not character then 
@@ -340,7 +332,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Track player function
+-- player tracking
 local function trackPlayer(targetPlayer)
     if targetPlayer == player then return end
     
@@ -386,20 +378,20 @@ local function trackPlayer(targetPlayer)
     targetPlayer.CharacterAdded:Connect(onCharacterAdded)
 end
 
--- Track all existing players
+-- track all existing players
 for _, targetPlayer in pairs(Players:GetPlayers()) do
     trackPlayer(targetPlayer)
 end
 
--- Track new players
+-- track new players
 Players.PlayerAdded:Connect(trackPlayer)
 
--- Cleanup on removal
+-- cleanup
 Players.PlayerRemoving:Connect(function(targetPlayer)
     HitsoundSettings.PlayerHealths[targetPlayer.UserId] = nil
 end)
 
--- UI Setup - Toggles Subtab
+-- UI Setup
 do
     local MainSection = TogglesSubtab:Section({Name = "Hitsound Settings", Side = 1})
     local ControlsSection = TogglesSubtab:Section({Name = "Controls", Side = 2})
@@ -472,7 +464,7 @@ do
         end
     })
 
-    -- Build dropdown items from SoundDatabase
+    -- build dropdown items from SoundDatabase
     local soundNames = {}
     for category, sounds in pairs(SoundDatabase) do
         for _, sound in ipairs(sounds) do
@@ -577,14 +569,13 @@ do
     local CustomSoundsSection = SoundsSubtab:Section({Name = "Custom Sounds", Side = 1})
     local MoreSoundsSection = SoundsSubtab:Section({Name = "More Sounds", Side = 2})
     
-    -- Helper function to create button for a sound
     local function createSoundButton(section, sound)
         section:Button({
             Name = sound.name,
             Callback = function()
                 if string.find(sound.id, "custom_") and not soundsPreloaded then
                     preloadCustomSounds()
-                    task.wait(1) -- Wait for download
+                    task.wait(1) -- wait for download
                 end
                 
                 playPreviewSound(sound.id)
@@ -598,7 +589,7 @@ do
         })
     end
 
-    -- Generate buttons from SoundDatabase
+    -- buttons from SoundDatabase
     for _, sound in ipairs(SoundDatabase.Popular) do
         createSoundButton(PopularSection, sound)
     end
