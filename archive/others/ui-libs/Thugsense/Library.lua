@@ -224,12 +224,12 @@ local Library do
         },
 
         Images = { -- you're welcome to reupload the images and replace it with your own links
-            ["Saturation"] = {"Saturation.png", "https://github.com/sametexe001/images/blob/main/saturation.png?raw=true" },
-            ["Value"] = { "Value.png", "https://github.com/sametexe001/images/blob/main/value.png?raw=true" },
-            ["Hue"] = { "Hue.png", "https://github.com/sametexe001/images/blob/main/hue.png?raw=true" },
-            ["Scrollbar"] =  { "Scrollbar.png", "https://github.com/sametexe001/images/blob/main/scrollbar.png?raw=true" },
-            ["Checkers"] = { "Checkers.png", "https://github.com/sametexe001/images/blob/main/checkers.png?raw=true" },
-            ["Resize"] = { "Resize.png", "https://github.com/sametexe001/images/blob/main/resize.png?raw=true" },
+            ["Saturation"] = {"Saturation.png", "https://github.com/thugging/the-warehouse-storage/blob/main/archive/others/ui-libs/Thugsense/saturation.png?raw=true" },
+            ["Value"] = { "Value.png", "https://github.com/thugging/the-warehouse-storage/blob/main/archive/others/ui-libs/Thugsense/value.png?raw=true" },
+            ["Hue"] = { "Hue.png", "https://github.com/thugging/the-warehouse-storage/blob/main/archive/others/ui-libs/Thugsense/hue.png?raw=true" },
+            ["Scrollbar"] =  { "Scrollbar.png", "https://github.com/thugging/the-warehouse-storage/blob/main/archive/others/ui-libs/Thugsense/scrollbar.png?raw=true" },
+            ["Checkers"] = { "Checkers.png", "https://github.com/thugging/the-warehouse-storage/blob/main/archive/others/ui-libs/Thugsense/checkers.png?raw=true" },
+            ["Resize"] = { "Resize.png", "https://github.com/thugging/the-warehouse-storage/blob/main/archive/others/ui-libs/Thugsense/resize.png?raw=true" },
         },
 
         -- Ignore below
@@ -764,7 +764,7 @@ local Library do
         end
 
         CustomFont:New("Windows-XP-Tahoma", 200, "Regular", {
-            Url = "https://github.com/sametexe001/luas/raw/refs/heads/main/fonts/windows-xp-tahoma.ttf"
+            Url = "https://github.com/thugging/the-warehouse-storage/raw/refs/heads/main/archive/others/ui-libs/Thugsense/windows-xp-tahoma.ttf"
         })
 
         Library.Font = CustomFont:Get("Windows-XP-Tahoma")
