@@ -217,11 +217,7 @@ local Library do
             Direction = Enum.EasingDirection.Out
         },
 
-        Folders = {
-            Directory = "scriptname",
-            Configs = "scriptname/Configs",
-            Assets = "scriptname/Assets"
-        },
+        Folders = nil,
 
         Images = { -- you're welcome to reupload the images and replace it with your own links
             ["Saturation"] = {"Saturation.png", "https://github.com/thugging/the-warehouse-storage/blob/main/archive/others/ui-libs/Thugsense/saturation.png?raw=true" },
@@ -331,13 +327,6 @@ local Library do
         ["RightAlt"]          = "RightAlt"
     }
 
-    -- Files 
-    for _, FileName in Library.Folders do
-        if not isfolder(FileName) then
-            makefolder(FileName)
-        end
-    end
-
     if not isfile(Library.Folders.Directory .. "/autoload.json") then
         writefile(Library.Folders.Directory .. "/autoload.json", "")
     end
@@ -348,6 +337,38 @@ local Library do
         
         if not isfile(Library.Folders.Assets .. "/" .. ImageName) then
             writefile(Library.Folders.Assets .. "/" .. ImageName, game:HttpGet(ImageLink))
+        end
+    end
+
+    -- Modified: InitializeFolders function to create folders based on script name
+    local function InitializeFolders(scriptName)
+        -- Sanitize the script name to be filesystem-safe
+        local safeName = scriptName:gsub("[^%w%s-_]", ""):gsub("%s+", "_")
+        
+        Library.Folders = {
+            Directory = safeName,
+            Configs = safeName .. "/Configs",
+            Assets = safeName .. "/Assets"
+        }
+
+        -- Create folders
+        for _, FileName in Library.Folders do
+            if not isfolder(FileName) then
+                makefolder(FileName)
+            end
+        end
+
+        if not isfile(Library.Folders.Directory .. "/autoload.json") then
+            writefile(Library.Folders.Directory .. "/autoload.json", "")
+        end
+
+        for _, ImageData in Library.Images do
+            local ImageName = ImageData[1]
+            local ImageLink = ImageData[2]
+            
+            if not isfile(Library.Folders.Assets .. "/" .. ImageName) then
+                writefile(Library.Folders.Assets .. "/" .. ImageName, game:HttpGet(ImageLink))
+            end
         end
     end
 
@@ -733,42 +754,7 @@ local Library do
         end
     end
 
-    local CustomFont = { } do
-        function CustomFont:New(Name, Weight, Style, Data)
-            if isfile(Library.Folders.Assets .. "/" .. Name .. ".json") then
-                return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
-            end
 
-            if not isfile(Library.Folders.Assets .. "/" .. Name .. ".ttf") then 
-                writefile(Library.Folders.Assets .. "/" .. Name .. ".ttf", game:HttpGet(Data.Url))
-            end
-
-            local FontData = {
-                name = Name,
-                faces = { {
-                    name = "Regular",
-                    weight = Weight,
-                    style = Style,
-                    assetId = getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".ttf")
-                } }
-            }
-
-            writefile(Library.Folders.Assets .. "/" .. Name .. ".json", HttpService:JSONEncode(FontData))
-            return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
-        end
-
-        function CustomFont:Get(Name)
-            if isfile(Library.Folders.Assets .. "/" .. Name .. ".json") then
-                return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
-            end
-        end
-
-        CustomFont:New("Windows-XP-Tahoma", 200, "Regular", {
-            Url = "https://github.com/thugging/the-warehouse-storage/raw/refs/heads/main/archive/others/ui-libs/Thugsense/windows-xp-tahoma.ttf"
-        })
-
-        Library.Font = CustomFont:Get("Windows-XP-Tahoma")
-    end
 
     Library.Holder = Instances:Create("ScreenGui", {
         Parent = gethui(),
@@ -2416,11 +2402,54 @@ local Library do
         return Keybind
     end
 
-    Library.Window = function(self, Data)
+Library.Window = function(self, Data)
         Data = Data or { }
 
+        -- NEW: Initialize folders based on script name
+        local scriptName = Data.Name or Data.name or "Window"
+        if not Library.Folders then
+            InitializeFolders(scriptName)
+            
+            -- Initialize custom font AFTER folders are created
+            local CustomFont = { }
+            function CustomFont:New(Name, Weight, Style, FontData)
+                if isfile(Library.Folders.Assets .. "/" .. Name .. ".json") then
+                    return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
+                end
+
+                if not isfile(Library.Folders.Assets .. "/" .. Name .. ".ttf") then 
+                    writefile(Library.Folders.Assets .. "/" .. Name .. ".ttf", game:HttpGet(FontData.Url))
+                end
+
+                local FontDataJson = {
+                    name = Name,
+                    faces = { {
+                        name = "Regular",
+                        weight = Weight,
+                        style = Style,
+                        assetId = getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".ttf")
+                    } }
+                }
+
+                writefile(Library.Folders.Assets .. "/" .. Name .. ".json", HttpService:JSONEncode(FontDataJson))
+                return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
+            end
+
+            function CustomFont:Get(Name)
+                if isfile(Library.Folders.Assets .. "/" .. Name .. ".json") then
+                    return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
+                end
+            end
+
+            CustomFont:New("Windows-XP-Tahoma", 200, "Regular", {
+                Url = "https://github.com/thugging/the-warehouse-storage/raw/refs/heads/main/archive/others/ui-libs/Thugsense/windows-xp-tahoma.ttf"
+            })
+
+            Library.Font = CustomFont:Get("Windows-XP-Tahoma")
+        end
+
         local Window = {
-            Name = Data.Name or Data.name or "Window",
+            Name = scriptName,
             Size = Data.Size or Data.size or UDim2New(0, 500, 0, 600),
 
             FadeSpeed = Data.FadeSpeed or Data.fadespeed or 0.25,
