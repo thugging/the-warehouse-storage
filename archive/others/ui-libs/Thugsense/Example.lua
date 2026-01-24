@@ -1,4 +1,4 @@
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/sametexe001/sametlibs/refs/heads/main/Thugsense/Library.lua"))()
+local Library = loadstring(game:HttpGet("https://github.com/thugging/the-warehouse-storage/raw/refs/heads/main/archive/others/ui-libs/Thugsense/Library.lua"))()
 
 --
 local Window = Library:Window({
