@@ -1,4 +1,4 @@
---//https://scriptblox.com/script/Build-a-Stone-Miner!-Infinite-money-75223
+"https://scriptblox.com/script/Build-a-Stone-Miner!-Infinite-money-75223"
 --//Obfuscated with WeAreDevsObfuscator: 
 "https://wearedevs.net/obfuscator"
 --//Creator: Coderk
