@@ -1,4 +1,4 @@
---//https://scriptblox.com/script/Universal-Script-Mega-Hub-l-BEST-SCRIPTS-l-AUTO-FARMS-l-AND-WAY-MORE-92437
+"https://scriptblox.com/script/Universal-Script-Mega-Hub-l-BEST-SCRIPTS-l-AUTO-FARMS-l-AND-WAY-MORE-92437"
 --//Starts WeAreDevs and then swityches to an unkown obfuscator
 "https://wearedevs.net/obfuscator"
 --//Creator: tacarra0
