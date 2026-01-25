@@ -12,7 +12,7 @@
 
 Our script warehouse full of fun scripts, archived scripts, weird scripts messing with physics, scripts movement related, and etc.
 
-Organized by, Zyren and Carlos 
+Organized by, Zyren, Carlos and Cash
 
 ---
 
