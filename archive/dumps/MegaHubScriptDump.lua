@@ -1,0 +1,137 @@
+local Success_27, Error_Message_27 = pcall(function(...)
+    local var1 = game:HttpGet("https://sirius.menu/rayfield");
+    local var2 = loadstring(var1);
+    local Loaded_Var1 = var2();
+end)
+local Not_Loaded_Var1 = not Loaded_Var1;
+local CreateWindow = Loaded_Var1.CreateWindow;
+local Window = Loaded_Var1:CreateWindow({
+    LoadingTitle = "Loading...",
+    KeySettings = {
+        Subtitle = "Key System",
+        Title = "Untitled",
+        Key = {
+            "Hello",
+        },
+        GrabKeyFromSite = false,
+        SaveKey = true,
+        FileName = "Key",
+        Note = "No method of obtaining the key is provided",
+    },
+    KeySystem = false,
+    DisableBuildWarnings = false,
+    Discord = {
+        Enabled = false,
+        RememberJoins = true,
+        Invite = "noinvitelink",
+    },
+    ConfigurationSaving = {
+        Enabled = true,
+        FileName = "Big Hub",
+    },
+    DisableRayfieldPrompts = false,
+    Name = "Flash Hub | Easy Key System V2",
+    ToggleUIKeybind = "K",
+    Theme = "Ocean",
+    LoadingSubtitle = "by Leakg0d!",
+    Icon = 0,
+    ShowText = "Rayfield",
+});
+local CreateTab = Window.CreateTab;
+local Enter_Key = Window:CreateTab("Enter Key", 4483362458);
+local CreateInput = Enter_Key.CreateInput;
+local Input = Enter_Key:CreateInput({
+    Callback = function(p1_0, p2_0, p3_0, p4_0, p5_0, p6_0)
+        local var10 = (p1_0 and 14097049);
+        local var11 = tostring(p1_0);
+    end,
+    PlaceholderText = "Type your key here (then press Enter Key button)",
+    Name = "Enter Key (type here)",
+    RemoveTextAfterFocusLost = false,
+});
+local CreateButton = Enter_Key.CreateButton;
+local Button = Enter_Key:CreateButton({
+    Name = "Enter Key",
+    Callback = function(p1_0, p2_0, p3_0, p4_0)
+        local var12 = (var11 and 15436953);
+        local var13 = tostring(var11);
+        local var13_is_string = (var13 == "thisisthekey");
+        local var14 = (var13_is_string and 10937639);
+        local Success_29, Error_Message_29 = pcall(function(...)
+            local var15 = (Loaded_Var1 and 13216370);
+            local Notify_4 = Loaded_Var1.Notify;
+            if Notify_4 then -- ran, expr id 2, has an else.
+                local Notify_5 = Loaded_Var1.Notify;
+                local Notify_6 = Loaded_Var1:Notify({
+                    Duration = 4,
+                    Title = "Incorrect Key",
+                    Content = "The key you entered is incorrect.",
+                });
+            end
+        end)
+    end,
+});
+local CreateButton_2 = Enter_Key.CreateButton;
+local Button_2 = Enter_Key:CreateButton({
+    Name = "Get Key Link - Discord",
+    Callback = function(p1_0, p2_0)
+        local Success_30, Error_Message_30 = pcall(function(...)
+            local setclipboard = Env.setclipboard;
+            local _call17 = setclipboard("https://discord.gg/6GdvDKXcmE");
+        end)
+        local Success_31, Error_Message_31 = pcall(function(...)
+            local var18 = (Loaded_Var1 and 13216370);
+            local Notify_7 = Loaded_Var1.Notify;
+            if Notify_7 then -- ran, expr id 3, has an else.
+                local Notify_8 = Loaded_Var1.Notify;
+                local Notify_9 = Loaded_Var1:Notify({
+                    Duration = 3,
+                    Title = "Copied",
+                    Content = "Discord link copied to clipboard!",
+                });
+            end
+        end)
+    end,
+});
+local CreateTab_2 = Window.CreateTab;
+local Destroy_GUI = Window:CreateTab("Destroy GUI", 4483362458);
+local CreateButton_3 = Destroy_GUI.CreateButton;
+local Button_3 = Destroy_GUI:CreateButton({
+    Name = "Destroy GUI",
+    Callback = function(p1_0)
+        local Success_32, Error_Message_32 = pcall(function(...)
+            if not Loaded_Var1 then -- didnt run, expr id 4, has an else.
+            else
+                local Destroy = Loaded_Var1.Destroy;
+                local var20 = typeof(Destroy);
+                local var20_is_string = (var20 == "function");
+            end
+            local Destroy_2 = Loaded_Var1.Destroy;
+            local Destroy_3 = Loaded_Var1:Destroy();
+        end)
+        local Success_33, Error_Message_33 = pcall(function(...)
+            local var22 = (Loaded_Var1 and 13216370);
+            local Notify_10 = Loaded_Var1.Notify;
+            if Notify_10 then -- ran, expr id 5, has an else.
+                local Notify_11 = Loaded_Var1.Notify;
+                local Notify_12 = Loaded_Var1:Notify({
+                    Duration = 3,
+                    Title = "Destroyed",
+                    Content = "Rayfield GUI destruction attempted.",
+                });
+            end
+        end)
+    end,
+});
+local Success_28, Error_Message_28 = pcall(function(...)
+    local var8 = (Loaded_Var1 and 13216370);
+    local Notify = Loaded_Var1.Notify;
+    if Notify then -- ran, expr id 1, has an else.
+        local Notify_2 = Loaded_Var1.Notify;
+        local Notify_3 = Loaded_Var1:Notify({
+            Duration = 5,
+            Title = "Ready",
+            Content = "Key system loaded. Type the key and click the 'Enter Key' button to submit.",
+        });
+    end
+end)
