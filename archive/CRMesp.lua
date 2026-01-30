@@ -1,21 +1,19 @@
--- Get configuration from caller or use defaults
-local Config = getgenv().ESPConfig or {
-    ['ESP'] = {
-        ['Enabled'] = true,
-        ['ShowNames'] = true,
-        ['TeamCheck'] = true,
-        ['TeamColor'] = Color3.fromRGB(0, 255, 0),
-        ['EnemyColor'] = Color3.fromRGB(255, 0, 0),
-        ['FillTransparency'] = 0.8,
-        ['OutlineTransparency'] = 0,
-        ['ToggleKey'] = Enum.KeyCode.E,
-    }
-}
+--carlos was here ^^
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
+
+-- esp settings
+local espEnabled = true
+local showNames = true
+local teamCheck = true
+local teamColor = Color3.fromRGB(0, 255, 0)
+local enemyColor = Color3.fromRGB(255, 0, 0)
+local fillTrans = 0.8
+local outlineTrans = 0
+local useDisplayName = true -- Toggle between display name and username
 
 local espCache = {}
 
@@ -37,7 +35,9 @@ local function getPlayerName(plr)
             end
         end
     end
-    return plr.Name
+    
+    -- Return display name if enabled, otherwise return username
+    return useDisplayName and plr.DisplayName or plr.Name
 end
 
 local function addEsp(plr)
@@ -54,22 +54,22 @@ local function addEsp(plr)
         local hl = Instance.new("Highlight")
         hl.Name = "ESP_Highlight"
         hl.Adornee = char
-        hl.FillTransparency = Config.ESP.FillTransparency
-        hl.OutlineTransparency = Config.ESP.OutlineTransparency
+        hl.FillTransparency = fillTrans
+        hl.OutlineTransparency = outlineTrans
         hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         
-        if Config.ESP.TeamCheck and plr.Team == player.Team then
-            hl.FillColor = Config.ESP.TeamColor
-            hl.OutlineColor = Config.ESP.TeamColor
+        if teamCheck and plr.Team == player.Team then
+            hl.FillColor = teamColor
+            hl.OutlineColor = teamColor
         else
-            hl.FillColor = Config.ESP.EnemyColor
-            hl.OutlineColor = Config.ESP.EnemyColor
+            hl.FillColor = enemyColor
+            hl.OutlineColor = enemyColor
         end
         
         hl.Parent = char
         
         local tag = nil
-        if Config.ESP.ShowNames then
+        if showNames then
             local head = char:WaitForChild("Head", 2)
             if head then
                 local gui = Instance.new("BillboardGui")
@@ -83,7 +83,7 @@ local function addEsp(plr)
                 label.Size = UDim2.new(1, 0, 1, 0)
                 label.BackgroundTransparency = 1
                 label.Text = getPlayerName(plr)
-                label.TextColor3 = Config.ESP.TeamCheck and (plr.Team == player.Team and Config.ESP.TeamColor or Config.ESP.EnemyColor) or Config.ESP.EnemyColor
+                label.TextColor3 = teamCheck and (plr.Team == player.Team and teamColor or enemyColor) or enemyColor
                 label.TextStrokeTransparency = 0
                 label.TextScaled = true
                 label.Font = Enum.Font.GothamBold
@@ -125,10 +125,10 @@ RunService.RenderStepped:Connect(function()
         if plr and plr.Character then
             for i,v in pairs(objs) do
                 if v then
-                    v.Enabled = Config.ESP.Enabled
+                    v.Enabled = espEnabled
                     
-                    if Config.ESP.TeamCheck then
-                        local color = plr.Team == player.Team and Config.ESP.TeamColor or Config.ESP.EnemyColor
+                    if teamCheck then
+                        local color = plr.Team == player.Team and teamColor or enemyColor
                         
                         if v:IsA("Highlight") then
                             v.FillColor = color
@@ -146,19 +146,16 @@ end)
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
-    if input.KeyCode == Config.ESP.ToggleKey then
-        Config.ESP.Enabled = not Config.ESP.Enabled
-        print("[ESP] " .. (Config.ESP.Enabled and "ON" or "OFF"))
+    if input.KeyCode == Enum.KeyCode.T then -- Changed from E to T
+        espEnabled = not espEnabled
+        print("[ESP] " .. (espEnabled and "ON" or "OFF"))
     end
 end)
 
 print("[ESP] Loaded!")
 print("[ESP] PlaceId: " .. currentGame)
+print("[ESP] Using " .. (useDisplayName and "Display Names" or "Usernames"))
 if currentGame == zombieGame then
     print("[ESP] Custom naming enabled for this game")
 end
-print("[ESP] Press " .. Config.ESP.ToggleKey.Name .. " to toggle")
-print("[ESP] Current Settings:")
-for key, value in pairs(Config.ESP) do
-    print("  " .. key .. ":", value)
-end
+print("[ESP] Press T to toggle") -- Changed from E to T
