@@ -1,3 +1,9 @@
+-- Prevent multiple instances
+if getgenv().SilentAimCleanup then
+    getgenv().SilentAimCleanup()
+    print("[Silent Aim] Cleaned up previous instance")
+end
+
 -- Get configuration from caller or use defaults
 local Config = getgenv().SilentAimConfig or {
     ['SilentAim'] = {
@@ -30,6 +36,7 @@ local SilentAimCircle = nil
 local CurrentTarget = nil
 local Events = ReplicatedStorage:WaitForChild("Events")
 local ZFKLF__H = Events:WaitForChild("ZFKLF__H")
+local connections = {}
 
 -- Helper Functions
 local function IsPlayerDowned(player)
@@ -90,7 +97,7 @@ local function InitializeSilentAim()
     
     local VisualizeEvent = ReplicatedStorage:WaitForChild("Events2"):WaitForChild("Visualize")
 
-    RunService.RenderStepped:Connect(function()
+    table.insert(connections, RunService.RenderStepped:Connect(function()
         if SilentAimCircle then
             local mousePos = UserInputService:GetMouseLocation()
             SilentAimCircle.Visible = Config.SilentAim.Enabled and Config.SilentAim.ShowFOV
@@ -104,9 +111,9 @@ local function InitializeSilentAim()
         if Config.SilentAim.Enabled then
             GetClosestTarget()
         end
-    end)
+    end))
 
-    VisualizeEvent.Event:Connect(function(_, ShotCode, _, Gun, _, StartPos, BulletsPerShot)
+    table.insert(connections, VisualizeEvent.Event:Connect(function(_, ShotCode, _, Gun, _, StartPos, BulletsPerShot)
         if not Config.SilentAim.Enabled or not CurrentTarget or not CurrentTarget.Character then return end
         if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChildOfClass("Tool") then return end
 
@@ -130,17 +137,36 @@ local function InitializeSilentAim()
                 Gun.Hitmarker:Fire(targetPart)
             end
         end
-    end)
+    end))
 end
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
+table.insert(connections, UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
     if input.KeyCode == Enum.KeyCode.Q then
         Config.SilentAim.Enabled = not Config.SilentAim.Enabled
         print("[Silent Aim] Toggled:", Config.SilentAim.Enabled and "ON" or "OFF")
     end
-end)
+end))
+
+-- Cleanup function
+getgenv().SilentAimCleanup = function()
+    -- Disconnect all connections
+    for _, conn in pairs(connections) do
+        if conn then conn:Disconnect() end
+    end
+    connections = {}
+    
+    -- Remove FOV circle
+    if SilentAimCircle then
+        SilentAimCircle:Remove()
+        SilentAimCircle = nil
+    end
+    
+    CurrentTarget = nil
+    
+    print("[Silent Aim] Cleaned up successfully")
+end
 
 InitializeSilentAim()
 print("[Silent Aim] Loaded! Press Q to toggle")
