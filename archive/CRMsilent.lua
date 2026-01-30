@@ -1,10 +1,9 @@
--- Prevent multiple instances
 if getgenv().SilentAimCleanup then
     getgenv().SilentAimCleanup()
-    print("[Silent Aim] Cleaned up previous instance")
+    getgenv().SilentAimCleanup = nil
+    task.wait()
 end
 
--- Get configuration from caller or use defaults
 local Config = getgenv().SilentAimConfig or {
     ['SilentAim'] = {
         ['Enabled'] = true,
@@ -31,20 +30,17 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
--- Internal Variables
 local SilentAimCircle = nil
 local CurrentTarget = nil
 local Events = ReplicatedStorage:WaitForChild("Events")
 local ZFKLF__H = Events:WaitForChild("ZFKLF__H")
 local connections = {}
+local isRunning = true
 
--- Helper Functions
 local function IsPlayerDowned(player)
     if not player or not player.Character then return false end
-    
     local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
     if humanoid and humanoid.Health <= 15 then return true end
-    
     local charStats = player.Character:FindFirstChild("CharStats")
     if charStats then
         local downed = charStats:FindFirstChild("Downed")
@@ -56,19 +52,17 @@ local function IsPlayerDowned(player)
 end
 
 local function GetClosestTarget()
+    if not isRunning then return end
     CurrentTarget = nil
     local shortestDistance = Config.SilentAim.ShowFOV and Config.SilentAim.FOV_Circle or math.huge
     local mouseLocation = UserInputService:GetMouseLocation()
-
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             if Config.SilentAim.CheckDowned and IsPlayerDowned(player) then continue end
             if Config.SilentAim.CheckTeam and player.Team == LocalPlayer.Team then continue end
             if Config.SilentAim.CheckForceField and player.Character:FindFirstChildOfClass("ForceField") then continue end
-
             local hrp = player.Character.HumanoidRootPart
             local screenPosition, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-
             if onScreen then
                 local distance = (mouseLocation - Vector2.new(screenPosition.X, screenPosition.Y)).Magnitude
                 if distance < shortestDistance then
@@ -81,8 +75,11 @@ local function GetClosestTarget()
 end
 
 local function SetupFOVCircle()
-    if SilentAimCircle then SilentAimCircle:Remove() end
-    
+    if SilentAimCircle then 
+        SilentAimCircle:Remove() 
+        SilentAimCircle = nil
+    end
+    if not isRunning then return end
     SilentAimCircle = Drawing.new("Circle")
     SilentAimCircle.Color = Config.SilentAim.FOV_Color
     SilentAimCircle.Thickness = Config.SilentAim.FOV_Thickness
@@ -94,10 +91,9 @@ end
 
 local function InitializeSilentAim()
     SetupFOVCircle()
-    
     local VisualizeEvent = ReplicatedStorage:WaitForChild("Events2"):WaitForChild("Visualize")
-
     table.insert(connections, RunService.RenderStepped:Connect(function()
+        if not isRunning then return end
         if SilentAimCircle then
             local mousePos = UserInputService:GetMouseLocation()
             SilentAimCircle.Visible = Config.SilentAim.Enabled and Config.SilentAim.ShowFOV
@@ -107,32 +103,27 @@ local function InitializeSilentAim()
             SilentAimCircle.Color = Config.SilentAim.FOV_Color
             SilentAimCircle.Position = mousePos
         end
-        
         if Config.SilentAim.Enabled then
             GetClosestTarget()
         end
     end))
-
     table.insert(connections, VisualizeEvent.Event:Connect(function(_, ShotCode, _, Gun, _, StartPos, BulletsPerShot)
+        if not isRunning then return end
         if not Config.SilentAim.Enabled or not CurrentTarget or not CurrentTarget.Character then return end
         if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChildOfClass("Tool") then return end
-
         if Config.SilentAim.HitChanceEnabled then
             if math.random(1, 100) > Config.SilentAim.HitChance then return end
         end
-
         local targetPart = CurrentTarget.Character:FindFirstChild(Config.SilentAim.TargetPart)
-        
         if targetPart then
             local partPosition = targetPart.Position
             local bulletCount = type(BulletsPerShot) == "table" and #BulletsPerShot or 1
-            
             task.wait(0.005)
             for i = 1, math.clamp(bulletCount, 1, 100) do
+                if not isRunning then break end
                 local direction = (partPosition - StartPos).Unit
                 ZFKLF__H:FireServer("🧈", Gun, ShotCode, i, targetPart, partPosition, direction)
             end
-
             if Gun:FindFirstChild("Hitmarker") then
                 Gun.Hitmarker:Fire(targetPart)
             end
@@ -141,36 +132,24 @@ local function InitializeSilentAim()
 end
 
 table.insert(connections, UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not isRunning then return end
     if gameProcessed then return end
-    
     if input.KeyCode == Enum.KeyCode.Q then
         Config.SilentAim.Enabled = not Config.SilentAim.Enabled
-        print("[Silent Aim] Toggled:", Config.SilentAim.Enabled and "ON" or "OFF")
     end
 end))
 
--- Cleanup function
 getgenv().SilentAimCleanup = function()
-    -- Disconnect all connections
+    isRunning = false
     for _, conn in pairs(connections) do
         if conn then conn:Disconnect() end
     end
     connections = {}
-    
-    -- Remove FOV circle
     if SilentAimCircle then
         SilentAimCircle:Remove()
         SilentAimCircle = nil
     end
-    
     CurrentTarget = nil
-    
-    print("[Silent Aim] Cleaned up successfully")
 end
 
 InitializeSilentAim()
-print("[Silent Aim] Loaded! Press Q to toggle")
-print("[Silent Aim] Current Settings:")
-for key, value in pairs(Config.SilentAim) do
-    print("  " .. key .. ":", value)
-end
