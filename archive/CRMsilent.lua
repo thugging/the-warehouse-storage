@@ -11,7 +11,7 @@ local Config = getgenv().SilentAimConfig or {
         ['HitChanceEnabled'] = true,
         ['FOV_Circle'] = 60,
         ['ShowFOV'] = true,
-        ['FOV_Color'] = Color3.new(1, 1, 1),
+        ['FOV_Color'] = Color3.fromRGB(255, 255, 255), -- FIXED: Changed to fromRGB
         ['FOV_Thickness'] = 1,
         ['FOV_Filled'] = false,
         ['TargetPart'] = "Head",
@@ -19,6 +19,7 @@ local Config = getgenv().SilentAimConfig or {
         ['CheckWall'] = false,
         ['CheckDowned'] = false,
         ['CheckForceField'] = false,
+        ['CheckFriends'] = false, -- NEW: Check friends feature
     }
 }
 
@@ -51,6 +52,12 @@ local function IsPlayerDowned(player)
     return false
 end
 
+-- NEW: Check if player is a friend
+local function IsPlayerFriend(player)
+    if not player then return false end
+    return LocalPlayer:IsFriendsWith(player.UserId)
+end
+
 local function GetClosestTarget()
     if not isRunning then return end
     CurrentTarget = nil
@@ -61,6 +68,7 @@ local function GetClosestTarget()
             if Config.SilentAim.CheckDowned and IsPlayerDowned(player) then continue end
             if Config.SilentAim.CheckTeam and player.Team == LocalPlayer.Team then continue end
             if Config.SilentAim.CheckForceField and player.Character:FindFirstChildOfClass("ForceField") then continue end
+            if Config.SilentAim.CheckFriends and IsPlayerFriend(player) then continue end -- NEW: Friend check
             local hrp = player.Character.HumanoidRootPart
             local screenPosition, onScreen = Camera:WorldToViewportPoint(hrp.Position)
             if onScreen then
