@@ -1,0 +1,18 @@
+--carlos was here :D
+-- BRO THIS IS THE ESP RETARD 
+
+getgenv().ESPConfig = {
+    ['ESP'] = {
+        ['Enabled'] = true,
+        ['ShowNames'] = true,
+        ['TeamCheck'] = true,
+        ['TeamColor'] = Color3.fromRGB(0, 255, 0), -- Green for friends
+        ['EnemyColor'] = Color3.fromRGB(255, 0, 0), -- Red for enemies
+        ['FillTransparency'] = 0.8, 
+        ['OutlineTransparency'] = 0, 
+        ['ToggleKey'] = Enum.KeyCode.T,
+    }
+}
+
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/thugging/the-warehouse-storage/refs/heads/main/archive/CRMesp.lua"))()
