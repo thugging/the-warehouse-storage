@@ -1,0 +1,29 @@
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+local player = Players.LocalPlayer
+local function trackCharacter(character)
+    local humanoid = character:WaitForChild("Humanoid")
+    local lastHealth = humanoid.Health
+humanoid.HealthChanged:Connect(function(newHealth)
+        if newHealth < lastHealth then
+            local damageTaken = lastHealth - newHealth
+
+            StarterGui:SetCore("SendNotification", {
+                Title = "Health Update",
+                Text = "Your health is now: " .. math.floor(newHealth),
+                Duration = 2
+            })
+
+            StarterGui:SetCore("SendNotification", {
+                Title = "Damage Taken",
+                Text = "You took: " .. math.floor(damageTaken) .. " damage!",
+                Duration = 2
+            })
+        end
+        lastHealth = newHealth
+    end)
+end
+if player.Character then
+    trackCharacter(player.Character)
+end
+player.CharacterAdded:Connect(trackCharacter)
